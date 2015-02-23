@@ -1,5 +1,7 @@
 # Compiler flag definitions common to Chaste & third party library builds
 
+
+if(MSVC) # Applies only to MSVC
 #For GUI configs. Change C, and CXX compiler flags dynamically to static, debug build.
 #The overrides.cmake include takes care of non GUI builds.
 foreach(flag_var
@@ -44,3 +46,4 @@ endif()
 #message("  LINK: ${CMAKE_EXE_LINKER_FLAGS}; debug: ${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
 #get_directory_property(DirDefs DEFINITIONS)
 #message("  DEFS: ${DirDefs}")
+endif(MSVC)

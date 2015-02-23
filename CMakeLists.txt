@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 2.8.10)
 
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules)
+include(CheckIncludeFile)
+include(ChasteMacros)
+
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/overrides.cmake)
 
 project(Chaste)
@@ -60,7 +64,7 @@ endif(found EQUAL -1)
 
 endif(RUN_TESTS)
 
-include(AdditionalIncludes.cmake)
+#include(AdditionalIncludes.cmake)
 
 #Chaste source root
 set(CHASTE_SOURCE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -84,12 +88,36 @@ add_definitions(-DCHASTE_CVODE -DCHASTE_SUNDIALS_VERSION=20500)
 add_definitions(-DCHASTE_VTK)
 
 #Third-party libraries
-set(THIRD_PARTY_LIBS "${CMAKE_CURRENT_SOURCE_DIR}/../external_libs" CACHE PATH "Location of external libraries used by Chaste.")
+#set(THIRD_PARTY_LIBS "${CMAKE_CURRENT_SOURCE_DIR}/../external_libs" CACHE PATH "Location of external libraries used by Chaste.")
+
+#find PETSc
+find_package(PETSc REQUIRED)
+
+#find Boost
+find_package(Boost REQUIRED)
+
+#find HDF5
+find_package(HDF5 REQUIRED)
+
+#find ParMETIS
+find_package(ParMETIS REQUIRED)
+
+#find METIS
+find_package(METIS REQUIRED)
+
+#Locate MPI
+find_package(MPI REQUIRED)
+
+#Locate VTK
+find_package(VTK REQUIRED)
+
+#Locate Sundials
+find_package(SUNDIALS REQUIRED)
 
 #Perhaps use finders to locate these libraries?
 #set(BOOST_INCLUDES "${THIRD_PARTY_LIBS}/boost_1_53_0/include/boost-1_53")
-set(PETSC_ARCH "WINDOWS_BUILD" CACHE STRING
-    "PETSc Architecture. Usually determines which build of PETSc to use")
+#set(PETSC_ARCH "WINDOWS_BUILD" CACHE STRING
+#    "PETSc Architecture. Usually determines which build of PETSc to use")
 #set(PETSC_INCLUDES "${THIRD_PARTY_LIBS}/petsc-3.3-p6/include"
 #"${THIRD_PARTY_LIBS}/petsc-3.3-p6/${PETSC_ARCH}/include")
 #set(HDF5_INCLUDES "${THIRD_PARTY_LIBS}/hdf5_1_8_10_p1/include")
@@ -97,6 +125,14 @@ set(PETSC_ARCH "WINDOWS_BUILD" CACHE STRING
 #set(METIS_INCLUDES "${THIRD_PARTY_LIBS}/parmetis_4_0_2_p3/metis/include")
 set(CXXTEST_INCLUDES "${CMAKE_SOURCE_DIR}/cxxtest")
 
+set(CHASTE_INCLUDES #These are now mainly set externally in AdditionalIncludes.cmake
+    "${CXXTEST_INCLUDES}" "${CHASTE_INCLUDES}" "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${BOOST_INCLUDES}" "${PETSC_INCLUDES}" "${HDF5_INCLUDES}"
+    "${PARMETIS_INCLUDES}" "${METIS_INCLUDES}" "${VTK_INCLUDE_DIRS}"
+    "${SUNDIALS_INCLUDES}"
+)
+
+if (WIN32)
 #MS Includes
 set(MS_MPI_INCLUDES "C:/MS_HPC_PACK_2012/Inc" CACHE PATH "Path to MS HPC Pack header files.")
 set(WINDOWS_SDK "C:/Program Files (x86)/Microsoft SDKs/Windows/v7.1A/Include" CACHE PATH "Path to Windows SDK headers.")
@@ -112,12 +148,12 @@ if(MSVC10)
   set(VS_INCLUDES "${VS_10_INCLUDES}")
 endif(MSVC10)
 
-set(CHASTE_INCLUDES #These are now mainly set externally in AdditionalIncludes.cmake
-    "${WINDOWS_SDK}" "${CXXTEST_INCLUDES}" "${CHASTE_INCLUDES}" "${CMAKE_CURRENT_SOURCE_DIR}"
-    "${VS_INCLUDES}" "${MS_MPI_INCLUDES}"
-    #"${BOOST_INCLUDES}" "${PETSC_INCLUDES}" "${HDF5_INCLUDES}"
-    #"${PARMETIS_INCLUDES}" "${METIS_INCLUDES}"
-)
+list(APPEND CHASTE_INCLUDES "${WINDOWS_SDK}" "${VS_INCLUDES}" "${MS_MPI_INCLUDES}")
+
+endif(WIN32)
+
+
+
 include_directories("${CHASTE_INCLUDES}")
 
 # Where generated source/header files are put
@@ -125,16 +161,27 @@ include_directories("${CHASTE_BUILD_ROOT}/src")
 
 # A macro to recursively find Chaste header locations
 macro(HEADER_DIRS base_dir return_list)
-    file(GLOB_RECURSE new_list base_dir *.hpp *.h)
+    set(new_list "")
     set(dir_list "")
+    #message("base dir = ${base_dir}")
+
+    file(GLOB_RECURSE new_list ${base_dir}/*.hpp ${base_dir}/*.h)
+    #message("new list = ${new_list}")
     foreach(file_path ${new_list})
         get_filename_component(dir_path ${file_path} PATH)
         set(dir_list ${dir_list} ${dir_path})
     endforeach()
+    
     list(REMOVE_DUPLICATES dir_list)
+    
     if(NOT ${PROJECT_NAME} MATCHES "^test")
         list(APPEND dir_list "${CHASTE_INCLUDES}")
     endif()
+    
+
+    #message("return list = ${return_list}")
+    #message("dir list = ${dir_list}")
+
     set(${return_list} ${dir_list})
 endmacro()
 
@@ -177,7 +224,10 @@ set(CHASTE_LINK_LIBRARIES ${CHASTE_LINK_LIBRARIES} vtkFiltering vtkIO vtkCommon 
 
 #This is for a 64-bit build. 32-bit may need to be manually set. Would be nice to automate
 #These switches were required due to import of time.h, Windows.h and Winsock2.h in "mesh"
+if(WIN32)
 add_definitions(-D_WIN64 -D_AMD64_)
+
+
 
 link_directories("${THIRD_PARTY_LIBS}/all_lib")
 
@@ -187,11 +237,10 @@ else()
     add_definitions(-MDd)
 endif()
 
+
 # Ensure M_PI is always defined in cmath
 add_definitions(-D_USE_MATH_DEFINES)
-
-#Locate MPI
-find_package(MPI)
+endif(WIN32)
 
 #Build the component Test infrastructure
 option (ENABLE_CHASTE_TESTING "Set whether to generate the CHASTE testing infrastructure." ON)
