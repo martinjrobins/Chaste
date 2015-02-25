@@ -1,5 +1,5 @@
 project(global)
-
+message("Configuring component global")
 # The auto-generated source files
 set(version_cpp "${CHASTE_BUILD_ROOT}/src/Version.cpp")
 set(build_root_cpp "${CHASTE_BUILD_ROOT}/src/GetChasteBuildRoot.cpp")
@@ -16,22 +16,13 @@ if(EXISTS "${version_file}")
     list(GET full_version_list ${length} chaste_revision)
     message("Chaste Release Full Version = ${full_version}, Revision = ${chaste_revision}")
 else()
-    # ReleaseVersion file not found, obtain revision information from SVN
+    # ReleaseVersion file not found, obtain revision information from Git
+    find_package(Git REQUIRED)
 
-    # The following requires a proper command-line svn client to be installed, not
-    # just an ordinary shell extension like TortoiseSVN'
-    # Install SlikSVN or the distribution from Collabnet (if you don't mind registering)
-    find_package(Git)
-    if(Git_FOUND)
-        Git_WC_INFO("${CHASTE_SOURCE_ROOT}" chaste)
-        set(chaste_revision "${chaste_WC_REVISION}")
-        message("Current Chaste SVN Revision = ${chaste_WC_REVISION}. Chaste Last Changed Revision = ${chaste_WC_LAST_CHANGED_REV}")
-    if(${chaste_WC_REVISION} EQUAL ${chaste_WC_LAST_CHANGED_REV})
-        set(CHASTE_WC_MODIFIED "false")
-    else()
-        set(CHASTE_WC_MODIFIED "true")
-    endif()
-    endif(Git_FOUND)
+    Git_WC_INFO("${CHASTE_SOURCE_ROOT}" chaste)
+    set(chaste_revision "${chaste_WC_REVISION}")
+    message("Current Chaste Git Revision = ${chaste_WC_REVISION}. Chaste Modified = ${chaste_WC_MODIFIED}")
+
 endif()
 file(STRINGS "${CHASTE_BUILD_ROOT}/build_timestamp" time_stamp)
 set(compiler_type "${CMAKE_CXX_COMPILER}")
@@ -51,7 +42,7 @@ file(READ "${CMAKE_CURRENT_SOURCE_DIR}/src/Version.cpp.in" template)
 string(REPLACE "%(licence)s" "${licence}" template "${template}")
 string(REPLACE "%(chaste_root)s" "${CHASTE_SOURCE_ROOT}/" template "${template}")
 string(REPLACE "%(revision)s" "${chaste_revision}" template "${template}")
-string(REPLACE "%(wc_modified)s" "${CHASTE_WC_MODIFIED}" template "${template}")
+string(REPLACE "%(wc_modified)s" "${chaste_WC_MODIFIED}" template "${template}")
 string(REPLACE "%(build_time)s" "${time_stamp}" template "${template}")
 string(REPLACE "%(time_size)d" "80" template "${template}")
 string(REPLACE "%(time_format)s" "%a, %d %b %Y %H:%M:%S +0000" template "${template}")

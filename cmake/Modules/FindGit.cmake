@@ -155,6 +155,19 @@ if(GIT_EXECUTABLE)
       set(${prefix}_WC_ROOT ${${prefix}_WC_URL})
     endif()
 
+    # Determine if there are any modified (tracked) files
+    execute_process(COMMAND ${GIT_EXECUTABLE} diff-index --name-only HEAD --
+      WORKING_DIRECTORY ${dir}
+      OUTPUT_VARIABLE git_modified_output
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      )
+    if("${git_modified_output}" STREQUAL "")
+      set(${prefix}_WC_MODIFIED False)
+    else()
+      set(${prefix}_WC_MODIFIED True)
+    endif()
+    
+
   endmacro(GIT_WC_INFO)
 endif(GIT_EXECUTABLE)
 
