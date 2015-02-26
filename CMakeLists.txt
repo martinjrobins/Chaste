@@ -94,7 +94,7 @@ add_definitions(-DCHASTE_VTK)
 find_package(PETSc REQUIRED)
 
 #find Boost
-find_package(Boost REQUIRED)
+find_package(Boost COMPONENTS filesystem system date_time serialization REQUIRED)
 
 #find HDF5
 find_package(HDF5 REQUIRED)
@@ -114,6 +114,12 @@ find_package(VTK REQUIRED)
 #Locate Sundials
 find_package(SUNDIALS REQUIRED)
 
+#Locate Xerces and XSD
+if (NOT Win32)
+find_package(Xerces REQUIRED)
+find_package(XSD REQUIRED)
+endif()
+
 #Perhaps use finders to locate these libraries?
 #set(BOOST_INCLUDES "${THIRD_PARTY_LIBS}/boost_1_53_0/include/boost-1_53")
 #set(PETSC_ARCH "WINDOWS_BUILD" CACHE STRING
@@ -129,8 +135,24 @@ set(CHASTE_INCLUDES #These are now mainly set externally in AdditionalIncludes.c
     "${CXXTEST_INCLUDES}" "${CHASTE_INCLUDES}" "${CMAKE_CURRENT_SOURCE_DIR}"
     "${BOOST_INCLUDES}" "${PETSC_INCLUDES}" "${HDF5_INCLUDES}"
     "${PARMETIS_INCLUDES}" "${METIS_INCLUDES}" "${VTK_INCLUDE_DIRS}"
-    "${SUNDIALS_INCLUDES}"
+    "${SUNDIALS_INCLUDES}" ${XERCESC_INCLUDE} ${XSD_INCLUDE_DIRS}
 )
+
+
+
+set(CHASTE_LINK_LIBRARIES 
+    ${VTK_LIBRARIES} 
+    ${Boost_LIBRARIES} 
+    ${PETSC_LIBRARIES} 
+    ${HDF5_LIBRARIES} 
+    ${PARMETIS_LIBRARIES} 
+    ${METIS_LIBRARIES} 
+    ${SUNDIALS_LIBRARIES}
+    ${XERCESC_LIBRARY}
+    )
+
+
+
 
 if (WIN32)
 #MS Includes
@@ -185,42 +207,7 @@ macro(HEADER_DIRS base_dir return_list)
     set(${return_list} ${dir_list})
 endmacro()
 
-#Third-party libraries linked against chaste test executables
-if(MSVC11)
-    set(CHASTE_LINK_LIBRARIES
-        GKlib
-        metis
-        parmetis
-        petsc
-        sundials_cvodes
-        sundials_nvecserial
-        f2cblas
-        f2clapack
-        libboost_filesystem-vc110-sgd-1_53
-        libboost_serialization-vc110-sgd-1_53
-        libboost_system-vc110-sgd-1_53
-        msmpi
-        hdf5d)
-endif(MSVC11)
 
-if(MSVC10)
-    set(CHASTE_LINK_LIBRARIES
-        GKlib
-        metis
-        parmetis
-        petsc
-        sundials_cvodes
-        sundials_nvecserial
-        f2cblas
-        f2clapack
-        libboost_filesystem-vc100-sgd-1_53
-        libboost_serialization-vc100-sgd-1_53
-        libboost_system-vc100-sgd-1_53
-        msmpi
-        hdf5d)
-endif(MSVC10)
-
-set(CHASTE_LINK_LIBRARIES ${CHASTE_LINK_LIBRARIES} vtkFiltering vtkIO vtkCommon vtksys vtkzlib vtkexpat vtkGraphics)
 
 #This is for a 64-bit build. 32-bit may need to be manually set. Would be nice to automate
 #These switches were required due to import of time.h, Windows.h and Winsock2.h in "mesh"
@@ -285,6 +272,7 @@ if(ENABLE_CHASTE_TESTING)
     endmacro(CHASTE_ADD_TEST)
 
   macro(CHASTE_GENERATE_TEST_SUITES)
+    if(MSVC)
     if(NOT HAS_OWN_LINKER_FLAGS)
         set(LINKER_FLAGS "/NODEFAULTLIB:LIBCMT")
     endif(NOT HAS_OWN_LINKER_FLAGS)
@@ -292,7 +280,7 @@ if(ENABLE_CHASTE_TESTING)
     #disable linker warnings 4217, 4049: locally-defined symbol imported in function ...
     set(LINKER_FLAGS "${LINKER_FLAGS} /IGNORE:4217 /IGNORE:4049")
     #message("Linker flags for project ${PROJECT_NAME} = ${LINKER_FLAGS}")
-
+    endif(MSVC)
     foreach(test ${TEST_SUITES})
       string(REGEX REPLACE "([a-zA-Z0-9_/]+)[.]hpp" "\\1" testName "${test}")
       string(REPLACE "/" ";" testPath "${testName}")
@@ -341,7 +329,9 @@ if(ENABLE_CHASTE_TESTING)
 			message("Libraries=${component} ${CHASTE_DEPENDS_${component}} ${CHASTE_LINK_LIBRARIES}")
 			add_executable(${appName} ${app})
 			target_link_libraries(${appName} ${component} ${CHASTE_DEPENDS_${component}} ${CHASTE_LINK_LIBRARIES})
-			set_target_properties(${appName} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:LIBCMT /IGNORE:4217 /IGNORE:4049")
+            if(MSVC)
+			    set_target_properties(${appName} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:LIBCMT /IGNORE:4217 /IGNORE:4049")
+            endif()
 			get_target_property(incDirs ${appName} INCLUDE_DIRECTORIES)
 			list(APPEND incDirs "${CXXTEST_INCLUDES}")
 			foreach(dep ${CHASTE_DEPENDS_${component}})

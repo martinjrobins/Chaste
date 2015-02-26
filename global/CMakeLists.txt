@@ -80,10 +80,15 @@ std::string ChasteBuildType()
     return \"${CHASTE_BUILD_TYPE}\";
 }
 
-//This has been put here to satisfy an MSVC linker issue 
-int __cdecl _purecall(void){return 0;}
-
 ")
+
+if(MSVC)
+    file(APPEND "${build_root_cpp}" 
+    "
+    //This has been put here to satisfy an MSVC linker issue 
+    int __cdecl _purecall(void){return 0;}
+    ")
+endif()
 
 #Build the global library
 include_directories("${CHASTE_global_INCLUDE_DIRS}")

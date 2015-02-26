@@ -162,9 +162,9 @@ if(GIT_EXECUTABLE)
       OUTPUT_STRIP_TRAILING_WHITESPACE
       )
     if("${git_modified_output}" STREQUAL "")
-      set(${prefix}_WC_MODIFIED False)
+      set(${prefix}_WC_MODIFIED false)
     else()
-      set(${prefix}_WC_MODIFIED True)
+      set(${prefix}_WC_MODIFIED true)
     endif()
     
 
